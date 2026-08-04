@@ -16,6 +16,12 @@ resource "aws_instance" "my_instance" {
 
     ami           = "ami-02b64aa047cb5edf5"
     
-    instance_type = "t2.medium"
+    instance_type = "t3.medium"
+
+    tags = {
+        Name = "MyInstance"
+    }
+
+
   
 }
