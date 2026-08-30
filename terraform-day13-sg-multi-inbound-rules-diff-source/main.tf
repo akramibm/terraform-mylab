@@ -7,7 +7,7 @@ resource "aws_security_group" "name" {
         for_each = var.allowed_ports
         content {
             description = "Allowed port ${ingress.key}"
-            from_port   = ingress.key
+            from_port   = ingress.keycd
             to_port     = ingress.key
             protocol    = "tcp"
             cidr_blocks = [ingress.value]
