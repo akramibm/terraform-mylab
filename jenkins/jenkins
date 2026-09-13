@@ -1,0 +1,74 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('clone') {
+            steps {
+                echo 'Cloning git repo'
+                git branch: 'main', url: 'https://github.com/PushpakChaudhari77/Terraform_CICD.git'
+            }
+        }
+            
+        stage('Init') {
+            steps {
+                echo 'terraform init'
+                sh 'terraform init'
+            }
+        }
+        stage('Plan') {
+            steps {
+               echo 'terraform plan'
+                sh 'terraform plan'
+            }
+        }
+            stage('Apply/destroy') {
+            steps {
+                echo 'terraform init'
+                sh 'terraform ${action} -auto-approve'
+            }
+        }
+    }
+}
+
+
+<!-- pipeline {
+    agent any
+
+    parameters {
+        choice(
+            name: 'action',
+            choices: ['apply', 'destroy'],
+            description: 'Select whether to apply or destroy Terraform resources'
+        )
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Cloning git repo...'
+                git branch: 'main', url: 'https://github.com/PushpakChaudhari77/Terraform_CICD.git'
+            }
+        }
+            
+        stage('Terraform Init') {
+            steps {
+                echo 'Initializing Terraform...'
+                sh 'terraform init'
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                echo 'Running Terraform Plan...'
+                sh 'terraform plan'
+            }
+        }
+
+        stage('Terraform Apply / Destroy') {
+            steps {
+                echo "Running terraform ${params.action}..."
+                sh "terraform ${params.action} -auto-approve"
+            }
+        }
+    }
+} -->

@@ -1,0 +1,23 @@
+- name: set-prompt
+  ansible.builtin.shell: set-prompt vault
+  ignore_errors: true
+
+- name: install yum-utils
+  ansible.builtin.dnf:
+    name: yum-utils
+    state: present
+
+- name: install yum repo file
+  ansible.builtin.shell: yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+
+- name: install vault
+  ansible.builtin.dnf:
+    name: vault
+    state: present
+    update_cache: yes
+
+- name: start and enable vault service
+  ansible.builtin.systemd:
+    name: vault
+    state: started
+    enabled: yes

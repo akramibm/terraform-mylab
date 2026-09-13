@@ -1,0 +1,7 @@
+---
+# Run with: ansible-playbook -i inventory.ini pipelines/vault.yml
+- name: Install and configure HashiCorp Vault
+  hosts: vault
+  become: true
+  roles:
+    - vault

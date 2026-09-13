@@ -1,0 +1,5 @@
+- name: Tools Automation
+  become: true
+  hosts: all
+  roles:
+    - "{{tool_name}}"

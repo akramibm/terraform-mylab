@@ -9,3 +9,6 @@
 .terraform.lock.hcl
 # documents
 *.doc
+# Vault initialization and credentials
+*vault-init*.json
+*.vault-token

@@ -1,0 +1,116 @@
+- name: Install Java 21 (GoCD >= 24.1.0 requires Java 21) and dnf-plugins-core
+  ansible.builtin.dnf:
+    name:
+      - java-21-openjdk
+      - dnf-plugins-core
+    state: present
+
+- name: Ensure Java 21 is the active 'java' alternative
+  ansible.builtin.shell: |
+    set -e
+    JAVA21=$(ls -d /usr/lib/jvm/java-21-openjdk*/bin/java 2>/dev/null | head -1)
+    if [ -n "$JAVA21" ]; then
+      alternatives --set java "$JAVA21"
+    fi
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Configure GoCD YUM repository
+  ansible.builtin.yum_repository:
+    name: gocd
+    description: GoCD YUM Repository
+    baseurl: https://download.gocd.org
+    gpgcheck: false
+    enabled: true
+
+- name: Download GoCD RPM package via DNF
+  ansible.builtin.command: dnf download --destdir=/tmp go-server
+  args:
+    creates: /tmp/go-server*.rpm
+
+- name: Install GoCD Server via RPM bypassing SHA1 checks
+  ansible.builtin.shell: rpm -ivh --nodigest --nofiledigest --nosignature /tmp/go-server*.rpm
+  args:
+    creates: /usr/share/go-server
+
+- name: Start and enable GoCD server service
+  ansible.builtin.systemd:
+    name: go-server
+    state: started
+    enabled: yes
+  register: gocd_start_result
+  ignore_errors: true
+
+- name: Report available memory (common cause of GoCD start failure)
+  ansible.builtin.command: free -h
+  register: gocd_mem_check
+  changed_when: false
+  when: gocd_start_result is failed
+
+- name: Show available memory
+  ansible.builtin.debug:
+    var: gocd_mem_check.stdout_lines
+  when: gocd_start_result is failed
+
+- name: Capture GoCD server journal on failure
+  ansible.builtin.command: journalctl -xeu go-server -n 150 --no-pager
+  register: gocd_journal
+  changed_when: false
+  when: gocd_start_result is failed
+
+- name: Show GoCD server journal on failure
+  ansible.builtin.debug:
+    var: gocd_journal.stdout_lines
+  when: gocd_start_result is failed
+
+- name: Capture GoCD wrapper log on failure
+  ansible.builtin.command: tail -n 200 /var/log/go-server/go-server-wrapper.log
+  register: gocd_wrapper_log
+  changed_when: false
+  ignore_errors: true
+  when: gocd_start_result is failed
+
+- name: Show GoCD wrapper log on failure
+  ansible.builtin.debug:
+    var: gocd_wrapper_log.stdout_lines
+  when: gocd_start_result is failed and gocd_wrapper_log.stdout_lines is defined
+
+- name: Check active Java version
+  ansible.builtin.command: java -version
+  register: gocd_java_version
+  changed_when: false
+  ignore_errors: true
+  when: gocd_start_result is failed
+
+- name: Show Java version
+  ansible.builtin.debug:
+    msg: "{{ gocd_java_version.stderr_lines | default(gocd_java_version.stdout_lines) | default('unavailable') }}"
+  when: gocd_start_result is failed
+
+- name: Check host architecture (GoCD ships an x86_64 wrapper binary)
+  ansible.builtin.command: uname -m
+  register: gocd_arch
+  changed_when: false
+  when: gocd_start_result is failed
+
+- name: Show host architecture
+  ansible.builtin.debug:
+    var: gocd_arch.stdout
+  when: gocd_start_result is failed
+
+- name: Fail the play with a clear message if GoCD did not start
+  ansible.builtin.fail:
+    msg: >-
+      go-server failed to start. See the 'Show available memory',
+      'Show GoCD server journal on failure', 'Show GoCD wrapper log
+      on failure', 'Show Java version', and 'Show host architecture'
+      debug output above for the root cause (systemd result:
+      {{ gocd_start_result.msg | default('unknown') }}).
+  when: gocd_start_result is failed
+
+- name: Clean temporary packages and DNF cache to free disk space
+  ansible.builtin.shell: |
+    rm -rf /tmp/*.rpm
+    dnf clean all
+  changed_when: false
