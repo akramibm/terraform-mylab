@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Maven: package (backend)",
+      "type": "shell",
+      "command": "mvn -DskipTests package",
+      "options": { "cwd": "${workspaceFolder}/backend", "env": { "JAVA_HOME": "/home/codespace/.jdk/jdk-21.0.8", "PATH": "/home/codespace/.jdk/jdk-21.0.8/bin:${env:PATH}" } },
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$maven"]
+    },
+    {
+      "label": "Maven: spring-boot:run (backend)",
+      "type": "shell",
+      "command": "mvn -DskipTests spring-boot:run",
+      "options": { "cwd": "${workspaceFolder}/backend", "env": { "JAVA_HOME": "/home/codespace/.jdk/jdk-21.0.8", "PATH": "/home/codespace/.jdk/jdk-21.0.8/bin:${env:PATH}" } },
+      "group": "none",
+      "problemMatcher": ["$maven"]
+    },
+    {
+      "label": "Run tests (backend)",
+      "type": "shell",
+      "command": "mvn test",
+      "options": { "cwd": "${workspaceFolder}/backend", "env": { "JAVA_HOME": "/home/codespace/.jdk/jdk-21.0.8", "PATH": "/home/codespace/.jdk/jdk-21.0.8/bin:${env:PATH}" } },
+      "group": "test",
+      "problemMatcher": ["$maven"]
+    }
+  ]
+}

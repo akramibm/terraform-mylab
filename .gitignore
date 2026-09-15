@@ -12,3 +12,10 @@
 # Vault initialization and credentials
 *vault-init*.json
 *.vault-token
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+**/target/
+*.jar
+*.class

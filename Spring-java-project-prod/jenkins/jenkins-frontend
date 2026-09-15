@@ -1,0 +1,93 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION      = "us-east-1"
+        AWS_ACCOUNT_ID  = "341221860475"
+        ECR_REPO        = "frontend"
+        IMAGE_TAG       = "${BUILD_NUMBER}"
+
+        IMAGE_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
+        CONTAINER_NAME = "frontend"
+    }
+
+    stages {
+        
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/CloudTechDevOps/Java-springboot-project.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir('frontend') {
+                    sh """
+                        docker build -t ${ECR_REPO}:${IMAGE_TAG} .
+                    """
+                }
+            }
+        }
+
+        stage('Login to ECR') {
+            steps {
+                sh """
+                aws ecr get-login-password --region ${AWS_REGION} | \
+                docker login --username AWS --password-stdin \
+                ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                """
+            }
+        }
+
+        stage('Tag Image') {
+            steps {
+                sh """
+                docker tag ${ECR_REPO}:${IMAGE_TAG} ${IMAGE_URI}
+                """
+            }
+        }
+
+        stage('Push Image to ECR') {
+            steps {
+                sh """
+                docker push ${IMAGE_URI}
+                """
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh """
+                docker stop ${CONTAINER_NAME} || true
+                docker rm ${CONTAINER_NAME} || true
+
+                docker pull ${IMAGE_URI}
+
+                docker run -d \
+                  --name ${CONTAINER_NAME} \
+                  --restart always \
+                  -p 8501:8501 \
+                  ${IMAGE_URI}
+                """
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo "Deployment Successful"
+        }
+
+        failure {
+            echo "Deployment Failed"
+        }
+    }
+}

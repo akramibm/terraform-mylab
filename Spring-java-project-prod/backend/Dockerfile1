@@ -1,0 +1,29 @@
+# Use Maven + JDK base image
+FROM maven:3.9.9-amazoncorretto-11
+
+# Set working directory
+WORKDIR /app
+
+# Copy source code into the container
+COPY . .        
+
+#COPY . /app
+
+# Build the Spring Boot JAR
+RUN mvn clean package -Dspring.profiles.active=build -DskipTests
+
+# Move the built JAR to a standard location
+RUN mv ./target/*.jar app.jar
+
+# Set environment variables for Spring Boot
+ENV SPRING_DATASOURCE_URL="jdbc:mysql://database-1.cuta28qqclk5.us-east-1.rds.amazonaws.com:3306/datastore?createDatabaseIfNotExist=true"
+ENV SPRING_DATASOURCE_USERNAME="admin"
+ENV SPRING_DATASOURCE_PASSWORD="Cloud123"
+ENV SPRING_JPA_HIBERNATE_DDL_AUTO="update"
+ENV SERVER_PORT=8084
+
+# Expose the port
+EXPOSE 8084
+
+# Run the application
+CMD ["java", "-jar", "app.jar"]

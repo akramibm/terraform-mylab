@@ -1,0 +1,66 @@
+name: 02 - Backend Pipeline
+
+on:
+  workflow_run:
+    workflows: ["01 - Infrastructure (Terraform)"]
+    types: [completed]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['backend/**']
+
+jobs:
+  build-test-deploy:
+    name: Backend Build, SonarQube & Systemd Deploy
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build & Run SonarQube Scan
+        working-directory: backend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -Dsonar.projectKey=backend \
+            -Dsonar.projectName=backend \
+            -Dsonar.host.url=$SONAR_HOST_URL \
+            -Dsonar.token=$SONAR_TOKEN
+
+      - name: Package JAR Artifact
+        working-directory: backend
+        run: mvn package -DskipTests
+
+      - name: Copy JAR to Remote Host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "backend/target/*.jar"
+          target: "/tmp/"
+          strip_components: 2
+
+      - name: Reload & Restart Systemd Backend Daemon
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo mv /tmp/*.jar /opt/backend/app.jar
+            sudo chown appuser:appuser /opt/backend/app.jar
+            sudo systemctl restart backend
+            sleep 5
+            sudo systemctl is-active --quiet backend || (echo "Backend failed to launch" && exit 1)

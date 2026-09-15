@@ -1,0 +1,9 @@
+# CODEOWNERS — assigns reviewers for specific paths
+# Top contributors requested as owners so PRs touching these areas auto-request review
+
+# Owners for workspace/editor configuration and CI
+.vscode/ @vardhan1228 @CloudTechDevOps
+.github/workflows/ @vardhan1228 @CloudTechDevOps
+
+# General fallback owners for everything else
+* @vardhan1228 @CloudTechDevOps

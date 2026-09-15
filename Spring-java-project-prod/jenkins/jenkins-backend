@@ -1,0 +1,105 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION      = "us-east-1"
+        AWS_ACCOUNT_ID  = "341221860475"
+
+        ECR_REPO        = "backend"
+        IMAGE_TAG       = "${BUILD_NUMBER}"
+        IMAGE_URI       = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
+
+        CONTAINER_NAME  = "backend"
+        CONTAINER_PORT  = "8084"
+    }
+
+    stages {
+
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/CloudTechDevOps/Java-springboot-project.git'
+            }
+        }
+
+        stage('Login to ECR') {
+            steps {
+                sh '''
+                aws ecr get-login-password --region ${AWS_REGION} | \
+                docker login --username AWS --password-stdin \
+                ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir('backend') {
+                    sh '''
+                    docker build -t ${ECR_REPO}:${IMAGE_TAG} .
+                    docker tag ${ECR_REPO}:${IMAGE_TAG} ${IMAGE_URI}
+                    '''
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh '''
+                docker push ${IMAGE_URI}
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                docker stop ${CONTAINER_NAME} || true
+                docker rm ${CONTAINER_NAME} || true
+
+                docker pull ${IMAGE_URI}
+
+                docker run -d \
+                  --name ${CONTAINER_NAME} \
+                  --restart always \
+                  -p 8084:8084 \
+                  -e MYSQL_HOST=database-1.c8lweogi44to.us-east-1.rds.amazonaws.com \
+                  -e MYSQL_PORT=3306 \
+                  -e MYSQL_USERNAME=admin \
+                  -e MYSQL_PASSWORD=Cloud123 \
+                  ${IMAGE_URI}
+                '''
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh '''
+                sleep 20
+                curl http://localhost:8084/actuator/health
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Backend deployed successfully."
+        }
+
+        failure {
+            echo "Backend deployment failed."
+        }
+
+        always {
+            sh 'docker ps -a'
+            sh 'docker images | head'
+        }
+    }
+}

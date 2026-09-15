@@ -1,0 +1,105 @@
+pipeline {
+    agent any
+
+    environment {
+        SONARQUBE = 'sonar'
+        JAR_NAME = 'datastore-0.0.7.jar'
+    }
+
+    stages {
+
+        stage('SCM') {
+            steps {
+                git branch: 'main', url: 'https://github.com/CloudTechDevOps/Java-springboot-project.git'
+            }
+        }
+
+        stage('Clean') {
+            steps {
+                dir('backend') {
+                    sh 'mvn clean'
+                }
+            }
+        }
+
+        stage('Code Quality') {
+            steps {
+                withSonarQubeEnv(SONARQUBE) {
+                    dir('backend') {
+                        sh 'mvn clean package -DskipTests=true'
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    def qg = waitForQualityGate()
+                    if (qg.status != 'OK') {
+                        error "❌ Quality Gate Failed"
+                    }
+                }
+            }
+        }
+
+        stage('Build Package') {
+            steps {
+                dir('backend') {
+                    sh 'mvn clean package -DskipTests=true'
+                }
+            }
+        }
+
+        stage('Copy JAR to Workspace') {
+            steps {
+                sh '''
+                sudo mkdir -p /var/log/app
+                sudo chown -R jenkins:jenkins /var/log/app
+                sudo chmod 777 /var/log/app
+                '''
+                sh '''
+                sudo cp backend/target/${JAR_NAME} ${WORKSPACE}/${JAR_NAME}
+                sudo chmod 755 ${WORKSPACE}/${JAR_NAME}
+                '''
+            }
+        }
+
+        stage('Stop Old Application') {
+            steps {
+                sh '''
+                PID=$(pgrep -f datastore-0.0.7.jar || true)
+                if [ -n "$PID" ]; then
+                    echo "Stopping existing application with PID: $PID"
+                    sudo kill -9 $PID
+                else
+                    echo "No existing application running"
+                fi
+                '''
+            }
+        }
+
+        stage('Run Application') {
+            steps {
+                sh '''
+                sudo nohup java -jar datastore-0.0.7.jar \
+                 --MYSQL_HOST="jdbc:mysql://database-1.cstu40q04izz.us-east-1.rds.amazonaws.com:3306/datastore?createDatabaseIfNotExist=true" \
+                 --MYSQL_USERNAME="admin" \
+                 --MYSQL_PASSWORD="Cloud123" \
+                 --LOG_FILE_PATH="/var/log/app/datastore.log" \
+                 --server.port=8084 > /var/log/app/nohup.out 2>&1 &
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '🎉 Application Deployed Successfully & Running on EC2'
+        }
+        failure {
+            echo '❌ Pipeline Failed'
+        }
+    }
+}

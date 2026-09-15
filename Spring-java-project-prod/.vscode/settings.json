@@ -1,0 +1,22 @@
+{
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.home": "/home/codespace/.jdk/jdk-21.0.8",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "/home/codespace/.jdk/jdk-21.0.8",
+            "default": true
+        }
+    ],
+    "java.import.maven.enabled": true,
+    "java.debug.settings.hotCodeReplace": "auto",
+    "files.watcherExclude": {
+        "**/target": true
+    },
+    "python.defaultInterpreterPath": "/usr/bin/python3",
+    "terminal.integrated.env.linux": {
+        "JAVA_HOME": "/home/codespace/.jdk/jdk-21.0.8",
+        "PATH": "/home/codespace/.jdk/jdk-21.0.8/bin:${env:PATH}"
+    }
+}

@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Debug Spring Boot (backend)",
+      "request": "launch",
+      "mainClass": "com.datastore.person.DataStoreApplication",
+      "cwd": "${workspaceFolder}/backend",
+      "projectName": "backend",
+      "env": {
+        "JAVA_HOME": "/home/codespace/.jdk/jdk-21.0.8",
+        "PATH": "/home/codespace/.jdk/jdk-21.0.8/bin:${env:PATH}"
+      }
+    }
+  ]
+}
