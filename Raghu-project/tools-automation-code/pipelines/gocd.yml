@@ -1,0 +1,27 @@
+format_version: 10
+pipelines:
+  vault:
+    group: tools
+    materials:
+      git-5766e3f:
+        git: https://github.com/akramibm/tools-automation-code.git
+        shallow_clone: false
+        auto_update: true
+        branch: main
+
+    stages:
+      - ansible:
+          fetch_materials: true
+          approval:
+            type: manual
+            allow_only_on_success: false
+          jobs:
+            ansible:
+              tasks:
+                - exec: {command: ansible-playbook, arguments: [ "-i", "gocd-public.awsdevops16297.fun,", "tools.yml", "-e", "tool_name=gocd", "-e", "ansible_user=ec2-user", "-e", "ansible_password=DevOps321" ], run_if: passed}
+
+
+
+
+
+

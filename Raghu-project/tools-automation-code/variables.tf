@@ -26,9 +26,11 @@ variable "zone_id" {
   description = "The ID of the zone where the resources will be created"
   default     = "Z072984912HXMKS39INCC"
 }
+
+
 variable "ssh_password" {
   type        = string
-  description = "Root input for SSH password"
+  description = "SSH login and sudo password for remote-exec and Ansible"
   sensitive   = true
 }
 
